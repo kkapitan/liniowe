@@ -1,0 +1,193 @@
+#Duża liczba
+$M = 100000000000
+
+#Dyskont
+$d = 1.15
+
+#Cena sprzedaży
+$c = 1.2
+
+## Miasta sprzedaży
+# 0 - Warszawa
+# 1 - Łódź
+# 2 - Kraków
+# 3 - Katowice
+# 4 - Wrocław
+# 5 - Poznań
+# 6 - Gdańsk
+# 7 - Szczecin
+# 8 - Lublin
+# 9 - Rzeszów
+# 10 - Olsztyn
+# 11 - Zielona Góra
+
+$p = [59000, 14000, 18000, 23000, 18000, 27000, 50000, 14000, 5000, 5000, 5000, 14000]
+
+$dp = [1,1.1,1.2,1.1,1.1,1.1,1.1,1.1,1.1,1.1,1.1,1.1]
+
+## Koszt transportu
+
+$ct =  [[0.06, 0.07, 0.23, 0.15, 0.18, 0.15, 0.18, 0.26, 0.10, 0.15, 0.11, 0.22],
+       [0.07, 0.03, 0.13, 0.10, 0.11, 0.10, 0.17, 0.22, 0.13, 0.16, 0.15, 0.17],
+       [0.23, 0.20, 0.03, 0.04, 0.13, 0.20, 0.30, 0.32, 0.15, 0.08, 0.26, 0.21],
+       [0.15, 0.10, 0.04, 0.03, 0.09, 0.16, 0.27, 0.28, 0.17, 0.12, 0.24, 0.17],
+       [0.18, 0.10, 0.13, 0.09, 0.03, 0.08, 0.23, 0.19, 0.21, 0.21, 0.23, 0.08],
+       [0.15, 0.10, 0.20, 0.16, 0.08, 0.04, 0.15, 0.12, 0.23, 0.27, 0.17, 0.07],
+       [0.18, 0.18, 0.30, 0.27, 0.23, 0.15, 0.04, 0.18, 0.26, 0.33, 0.08, 0.21]]
+
+$zp = [122000, 23000, 23000, 45000, 36000, 55000, 91000]
+
+$cp = [0.83, 0.99, 0.94, 0.91, 1.04, 0.81, 0.89]
+
+$m = ["Warszawa", "Lodz", "Krakow", "Katowice", "Wroclaw", "Poznan", "Gdansk", "Szczecin", "Lublin", "Rzeszow", "Olsztyn", "Zielona_Gora"]
+$pi = $m[0..6]
+
+$declaration = ""
+
+# Okres 1
+
+# Cel
+
+def cel(t)
+  tmp = "max: "
+
+  for i in 0...t do
+    tmp += "#{ (1.0/($d**i)) } * dochod#{i}"
+    i == t-1 ? tmp += ";\n"  : tmp += " + "
+  end
+  print tmp
+end
+
+# Dochód
+def dochod(t)
+  print "dochod#{t} = 300*przychod#{t} - 300*kosztProdukcji#{t} - 300*kosztTransportu#{t} - #{9200000 * $d**t} * b#{t};\n"
+end
+
+# Przychód
+
+def przychod(t)
+  tmp = "przychod#{t} = "
+  arr = $m
+
+  arr.each_with_index do |n, i|
+    tmp += "#{$c * $d**t } * sprzedaz#{t}#{n}"
+    i == arr.size-1 ? tmp += ";\n"  : tmp += " + "
+  end
+  print tmp
+end
+
+def koszt_produkcji(t)
+  tmp = "kosztProdukcji#{t} = "
+  arr = $pi
+  arr.each_with_index do |n, i|
+    tmp += "#{$cp[i] * $d**t } * wielkoscProd#{t}#{n}"
+    i == arr.size-1 ? tmp += ";\n"  : tmp += " + "
+  end
+  print tmp
+end
+
+def koszt_transportu(t)
+  tmp = "kosztTransportu#{t} = "
+  arr = $pi
+  arr2 = $m
+
+  arr.each_with_index do |from, i|
+    arr2.each_with_index do |to, j|
+      tmp += "#{$ct[i][j] * $d**t } * wielkoscTransportu#{t}#{from}#{to}"
+      i == arr.size-1 && j == arr2.size-1 ? tmp += ";\n"  : tmp += " + "
+    end
+  end
+  print tmp
+end
+
+def sprzedaz_popyt(t)
+  arr = $m
+  arr.each_with_index do |n, i|
+    print "sprzedaz#{t}#{n} < #{$p[i] * $dp[i] ** t};\n"
+  end
+end
+
+def sprzedaz_transport(t)
+  arr = $m
+  arr2 = $pi
+
+  arr.each_with_index do |zbyt, i|
+    tmp = "sprzedaz#{t}#{zbyt} < "
+    arr2.each_with_index do |piek, j|
+      tmp += "wielkoscTransportu#{t}#{piek}#{zbyt}"
+      j == arr2.size-1 ? tmp += ";\n"  : tmp += " + "
+    end
+    print tmp
+  end
+end
+
+def transport_produkcja(t)
+  arr = $pi
+  arr2 = $m
+
+  arr.each_with_index do |piek, i|
+    tmp = "wielkoscProd#{t}#{piek} > "
+    arr2.each_with_index do |zbyt, j|
+      tmp += "wielkoscTransportu#{t}#{piek}#{zbyt}"
+      j == arr2.size-1 ? tmp += ";\n"  : tmp += " + "
+    end
+    print tmp
+  end
+end
+
+def wielkosc_produkcji(t)
+  arr = $pi
+  arr.each_with_index do |n, i|
+    $declaration += "bin x#{t}#{n};\n"
+    print "wielkoscProd#{t}#{n} < #{$zp[i]} * x#{t}#{n};\n"
+    print "wielkoscProd#{t}#{n} > #{0.1 * $zp[i]} * x#{t}#{n};\n"
+  end
+end
+
+def wielkosc_transportu(t)
+  arr = $pi
+  arr2 = $m
+
+  arr.each_with_index do |piek, i|
+    arr2.each_with_index do |zbyt, j|
+      $declaration +=  "bin y#{t}#{piek}#{zbyt};\n"
+      print "wielkoscTransportu#{t}#{piek}#{zbyt} > 1000 * y#{t}#{piek}#{zbyt};\n"
+      print "wielkoscTransportu#{t}#{piek}#{zbyt} < #{$M} * y#{t}#{piek}#{zbyt};\n"
+    end
+  end
+end
+
+def poznan_miasto_doznan(t)
+  print "wielkoscProd#{t}Poznan < #{$zp[5]} * pozMa#{t};\n"
+  $declaration += "bin pozMa#{t};\n"
+end
+
+def inne_chujowe(t)
+  if t == 0
+    print "b#{t} = pozMa#{t};\n"
+  else
+    print "b#{t} = pozMa#{t} - pozMa#{t-1};\n"
+  end
+  $declaration += "bin b#{t};\n"
+end
+
+okresy = 5
+cel(okresy)
+for i in 0...okresy do
+  dochod(i)
+  przychod(i)
+  koszt_produkcji(i)
+  koszt_transportu(i)
+  sprzedaz_popyt(i)
+  sprzedaz_transport(i)
+  transport_produkcja(i)
+  wielkosc_produkcji(i)
+  wielkosc_transportu(i)
+  poznan_miasto_doznan(i)
+  inne_chujowe(i)
+end
+
+print $declaration
+
+
+
