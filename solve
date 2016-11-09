@@ -44,6 +44,8 @@ $pi = $m[0..6]
 
 $declaration = ""
 
+$stala = [18951000, 23341320, 28618767.75, 34984388.01, 41997715.77]
+
 # Okres 1
 
 # Cel
@@ -52,10 +54,16 @@ def cel(t)
   tmp = "max: "
 
   for i in 0...t do
-    tmp += "#{ (1.0/($d**i)) } * dochod#{i}"
+    tmp += "NVC#{i}"
     i == t-1 ? tmp += ";\n"  : tmp += " + "
   end
   print tmp
+end
+
+def NVC(t, q)
+  for i in 0...t do
+    print "NVC#{i} = #{ (1.0/($d**i)) } * dochod#{i} - #{ ((1.0*q)/($d**i)) * $stala[i]};\n"
+  end
 end
 
 # Dochód
@@ -157,8 +165,12 @@ def wielkosc_transportu(t)
   end
 end
 
-def poznan_miasto_doznan(t)
-  print "wielkoscProd#{t}Poznan < #{$zp[5]} * pozMa#{t};\n"
+def poznan_miasto_doznan(t, wylacz)
+  print "wielkoscProd#{t}Poznan < #{$zp[5] *(1-wylacz)} * pozMa#{t};\n"
+
+  if t != 0
+    print "pozMa#{t} > pozMa#{t-1};\n"
+  end
   $declaration += "bin pozMa#{t};\n"
 end
 
@@ -173,6 +185,7 @@ end
 
 okresy = 5
 cel(okresy)
+NVC(okresy,1)
 for i in 0...okresy do
   dochod(i)
   przychod(i)
@@ -183,7 +196,10 @@ for i in 0...okresy do
   transport_produkcja(i)
   wielkosc_produkcji(i)
   wielkosc_transportu(i)
-  poznan_miasto_doznan(i)
+end
+
+for i in 0...okresy do
+  poznan_miasto_doznan(i,0)
   inne_chujowe(i)
 end
 
